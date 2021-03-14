@@ -1,0 +1,40 @@
+variables:
+  APP_NAME_STAGING: genuino.stage.nft.dashboard
+  REPOSITORY_URL: 452664677010.dkr.ecr.eu-central-1.amazonaws.com
+  VERSION: latest
+
+services:
+  - docker:dind
+
+stages:
+  - deploy_staging
+
+deploy_staging:
+  stage: deploy_staging
+  image: ubuntu:16.04
+  only:
+    - tags
+  except:
+    - branches
+  tags:
+    - genuino.dashboardnft.runner
+  script:
+    # Add some dependencies for docker and the AWS CLI
+    - apt-get update -y  # Get the most up-to-date repos.
+    - apt-get install -y apt-transport-https ca-certificates software-properties-common python-software-properties curl python3-pip
+    # Install Docker
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    - apt-key fingerprint 0EBFCD88
+    - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    - apt-get update -y
+    - apt-get install -y docker-ce
+    # Install the AWS CLI and login to our registry
+    - pip3 install awscli
+    - pip3 install rsa
+    - echo `aws ecr get-login --no-include-email --region eu-central-1` | sh
+    # Build and push our image
+    - docker build -t $APP_NAME_STAGING -f ./Dockerfile .
+    - docker tag $APP_NAME_STAGING:$VERSION $REPOSITORY_URL/$APP_NAME_STAGING:$VERSION
+    - docker push $REPOSITORY_URL/$APP_NAME_STAGING:$VERSION
+    # Force deploy
+    - aws ecs update-service --cluster genuino-staging --service nft-dashboard --force-new-deployment --region eu-central-1

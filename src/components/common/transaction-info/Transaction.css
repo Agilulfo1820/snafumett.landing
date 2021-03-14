@@ -1,0 +1,10 @@
+.transaction-info {
+    position: fixed;
+    bottom: 0;
+    right: 20px;
+    margin-bottom: 20px;
+    width: 300px;
+    text-align: left;
+    word-break: break-all;
+    z-index: 1111111;
+}
